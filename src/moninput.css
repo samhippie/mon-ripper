@@ -1,0 +1,9 @@
+.moninput {
+	outline: solid 1px black;
+	padding: 16px;
+	margin: 4px;
+}
+
+.moninput input {
+	margin: 4px;
+}

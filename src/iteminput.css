@@ -1,0 +1,14 @@
+.iteminput {
+	padding: 8px;
+	margin: 4px;
+	outline: solid 1px black;
+}
+
+.iteminput ul {
+	list-style: none;
+	padding-left: 0;
+}
+
+.iteminput li {
+	margin-top: 4px;
+}
