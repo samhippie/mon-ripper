@@ -1,4 +1,5 @@
 import React from 'react';
+import 
 
 class Analysis {
 	constructor(id) {
@@ -11,6 +12,10 @@ class Analysis {
 		this.isKO = false;
 		this.move = '';
 		this.items = [];
+
+		//which move to select if doing a defensive calc
+		//this should be 0 for offensive calcs
+		this.selectedMove = 0;
 
 		this.calc = this.renderCalc();
 		this.calcWrapper = new CalcWrapper(this.calc);
@@ -66,15 +71,104 @@ class Analysis {
 		);
 	}
 
+	//puts all the information given in the damage calc
+	//so the user can then adjust everything
 	applyToCalc() {
 		const c = this.calcWrapper;
+		const enemyBuilder = new ImportableBuilder();
+		enemyBuilder.name = this.name || 'Swadloon';
+		if(this.type === 'offense') {
+			enemyBuilder.moves[0] = this.move;
+		}
+		const enemy = enemyBuilder.build();
 		c.putMon(this.mon, 1);
+		c.putMon(enemy, 2);
+
 	}
 
 	analyze() {
-		//big TODO
+		if(this.type === 'offense') {
+			this.offensiveAnalysis();
+		} else {
+			this.defensiveAnalysis();
+		}
+	}
+
+	offensiveAnalysis() {
+		//get whether the move is physical or special
+		
+
+		//start search with - nature, then neutral nature, then positive nature
+		//for each nature, make sure damage is between min roll of 0 evs and max roll of 252 evs
+		
+		//save EV values that yeild a possible roll
+	}
+
+	defensiveAnalysis() {
+		//TODO later
 	}
 }
+
+//builder for making PS importables
+//I'm too lazy to make proper setters, but it should be fine
+//I'm not even sure setters are "idiomatic" javascript/react/whatever
+class ImportableBuilder {
+	constructor() {
+		this.name = 'Swadloon';
+		this.moves = ['','','',''];
+		this.evs = {
+			HP: 0,
+			Atk: 0,
+			Def: 0,
+			SpA: 0, 
+			SpD: 0,
+			Spe: 0,
+		}
+		this.ivs = {
+			HP: 31,
+			Atk: 31,
+			Def: 31,
+			SpA: 31, 
+			SpD: 31,
+			Spe: 31,
+		}
+		this.item = '';
+		this.ability = '';
+		this.level = 50;
+		this.nature = 'Hardy';
+	}
+
+	//returns a PS importable that the damage calc will accept
+	build() {
+
+		let evString = '';
+		Object.keys(this.evs).forEach(stat => {
+			if(this.evs[stat] > 0) {
+				evString += this.evs[stat] + ' ' + stat + ' / '
+			}
+		});
+
+		let ivString = '';
+		Object.keys(this.ivs).forEach(stat => {
+			if(this.ivs[stat] < 31) {
+				ivString += this.ivs[stat] + ' ' + stat + ' / '
+			}
+		});
+
+		return this.name + ' @ ' + this.item + '\n' +
+			'Ability: ' + this.ability + '\n' +
+			'Level: ' + this.level + '\n' + 
+			'EVs: ' + evString + '\n' + 
+			this.nature + ' Nature\n' +
+			'IVs: ' + ivString + '\n' +
+			'- ' + this.moves[0] + '\n' + 
+			'- ' + this.moves[1] + '\n' + 
+			'- ' + this.moves[2] + '\n' + 
+			'- ' + this.moves[3] + '\n';
+			
+	}
+}
+
 
 //class for manipulating the damage calc
 class CalcWrapper {
@@ -110,6 +204,19 @@ class CalcWrapper {
 		pokeinfo.val(species + ' (' + spread + ')');
 		pokeinfo.change();
 
+	}
+
+	//sets item of a mon
+	setItem(item, place=2) {
+		const calc = this.getCalc();
+		const $ = calc.contentWindow.$;
+
+		//gets the item selector
+		const itemElem = place === 1 
+			? $('.item').first()
+			: $('.item').last();
+		itemElem.val(item);
+		itemElem.change();
 	}
 }
 
