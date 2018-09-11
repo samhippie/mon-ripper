@@ -5,6 +5,7 @@ import MonInput from './MonInput';
 import Calc from './Calc';
 import Results from './Results';
 import Sidebar from './Sidebar';
+import GenericModal from './GenericModal.js';
 
 import Analysis from './Analysis';
 import Combined from './Combined';
@@ -17,6 +18,7 @@ class Main extends Component {
 			selectedAnalysis: 0,
 			lastAnalysisId: 0,
 			combined: new Combined(),
+			showCombinedModal: false,
 		}
 	}
 
@@ -136,7 +138,13 @@ class Main extends Component {
 	//combine the saved analyses if needed
 	//show the results
 	handleCombine() {
-
+		this.state.combined.setAnalyses(this.state.analyses);
+		this.state.combined.combine((combined) => {
+			this.setState({
+				showCombinedModal: true,
+				combined: combined,
+			});
+		});
 	}
 
 	renderMonInput() {
@@ -187,10 +195,28 @@ class Main extends Component {
 		);
 	}
 
+	renderCombineModal() {
+		return (
+			<GenericModal
+				show={this.state.showCombinedModal}
+				contents={this.state.combined.content}
+				onClose={() => this.setState({ showCombinedModal: false })}
+			/>
+		);
+	}
+
+	renderDisclaimer() {
+		return (
+			<p>Items aren't implemented. If you know the item, input it in the damage calc.</p>
+		);
+	}
+
 	render() {
 		return (
 			<div className="main">
+				{this.renderCombineModal()}
 				<div className="left-subscreen">
+					{this.renderDisclaimer()}
 					{this.renderMonInput()}
 					{this.renderCalc()}
 					{this.renderResults()}
