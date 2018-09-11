@@ -5,7 +5,7 @@ class Results extends Component {
 		return (
 			<div>
 				Sub-results<br/>
-				{this.props.contents}
+				{this.props.content}
 			</div>
 		);
 	}

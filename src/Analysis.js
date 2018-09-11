@@ -26,6 +26,7 @@ class Analysis {
 		this.done = false;
 		
 		this.results = null;
+		this.contents = null;
 		
 		//this has an error string if there is an error
 		this.error = null;
@@ -84,15 +85,20 @@ class Analysis {
 		c.putMon(this.mon, 1);
 		c.putMon(enemy, 2);
 
-		c.getRoll();
+		//go ahead and change selectedMove
+		if(this.type === 'defense') {
+			const moves = getMoves(this.mon);
+			this.selectedMove = moves.findIndex(m => m === this.move);
+		}
 	}
 
-	analyze() {
-		if(this.type === 'offense') {
-			this.offensiveAnalysis();
-		} else {
-			this.defensiveAnalysis();
-		}
+	analyze(callback) {
+		this.results = this.type === 'offense'
+			? this.offensiveAnalysis()
+			: this.defensiveAnalysis();
+		this.done = true;
+		this.content = this.renderResults();
+		callback(this);
 	}
 
 	offensiveAnalysis() {
@@ -102,6 +108,8 @@ class Analysis {
 		const move = getMove(this.move);
 		const isPhysical = move.category === 'Physical';
 
+		const validSpreads = [];
+
 		//start search with - nature, then neutral nature, then positive nature
 		//for each nature, make sure damage is between min roll of 0 evs and max roll of 252 evs
 		const natureTypes = ['-',' ','+'];
@@ -109,19 +117,126 @@ class Analysis {
 			const nature = getNature(isPhysical, true, natureType);
 			const stat = getStat(isPhysical, true);
 			c.setNature(nature);
-			//TODO ev optimization stated above
-			for(let i = 0; i <= 252; i += 4) {
-				c.setEV(stat, i);
-				c.selectMove(this.selectedMove, 2);
-				const roll = c.getRoll();
+			c.selectMove(this.selectedMove, 2);
+
+			//get min for nature
+			c.setEV(stat, 0);
+			const min = c.getRoll()[0];
+			//get max for nature
+			c.setEV(stat, 252);
+			const max = c.getRoll()[15];
+			//if not min <= damage <= max, don't bother searching
+			if(this.damage >= min && this.damage <= max) {
+				for(let ev = 0; ev <= 252; ev += 4) {
+					//let's just assume that the IV is 31
+					if(ev % 8 === 0) continue;
+					c.setEV(stat, ev);
+					const roll = c.getRoll();
+					if(roll.includes(this.damage)) {
+						validSpreads.push([{
+							stat: stat,
+							nature: natureType,
+							ev: ev,
+						}]);
+					}
+				}
 			}
 		});
-		
-		//save EV values that yeild a possible roll
+		return validSpreads;
 	}
 
 	defensiveAnalysis() {
-		//TODO later
+		const c = this.calcWrapper;
+
+		//get whether the move is physical or special
+		const move = getMove(this.move);
+		const isPhysical = move.category === 'Physical';
+
+		//checks if damage fits in given damage range
+		const damageRange = getHealthPixels()[this.damage];
+		const checkDamage = (damage, hp) => {
+			//const hp = c.getStat('hp');
+			return damage >= damageRange.lower * hp &&
+				damage <= damageRange.upper * hp;
+		}
+
+		const validSpreads = [];
+
+		//start search with - nature, then neutral nature, then positive nature
+		//for each nature, make sure damage is between min roll of 0 evs and max roll of 252 evs
+		const natureTypes = ['-',' ','+'];
+		natureTypes.forEach(natureType => {
+			const nature = getNature(isPhysical, false, natureType);
+			const stat = getStat(isPhysical, false);
+			c.setNature(nature);
+			c.selectMove(this.selectedMove, 1);
+			
+			//get min for nature
+			c.setEV('hp', 252);//remember: more defense => less damage
+			c.setEV(stat, 252);
+			const min = c.getRoll()[0] / c.getStat('hp');
+			//get max for nature
+			c.setEV('hp', 0);
+			c.setEV(stat, 0);
+			const max = c.getRoll()[15] / c.getStat('hp');
+			//don't search if the nature is impossible
+			if(min <= damageRange.lower && max >= damageRange.upper) {
+				//check over every possible hp and (special) defense EV combination
+				//this could be smarter, but whatever
+				for(let hp = 0; hp < 252; hp += 4) {
+					if(hp % 8 === 0) continue;
+					c.setEV('hp', hp);
+					const hpStat = c.getStat('hp');
+					for(let ev = 0; ev < 252; ev += 4) {
+						if(ev % 8 === 0) continue;
+						c.setEV(stat, ev);
+						const roll = c.getRoll();
+						if(roll.find(r => checkDamage(r, hpStat))) {
+							validSpreads.push([{
+								stat: 'hp',
+								nature: ' ',
+								ev: hp,
+							}, {
+								stat: stat,
+								nature: natureType,
+								ev: ev,
+							}]);
+						}
+
+					}
+				}
+			}
+
+		});
+		return validSpreads;
+	}
+
+	renderResults() {
+		return (
+			<div>
+				<ul>
+					{this.results.map((result, i) => this.renderResult(result, i))}
+				</ul>
+			</div>
+		);
+	}
+
+	renderResult(result, key) {
+		return (
+			<li
+				key={key}
+			>
+				{result.map((stat, i) => this.renderStatResult(stat, i))}
+			</li>
+		);
+	}
+
+	renderStatResult(stat, key) {
+		return (
+			<div key={key}>
+				{stat.stat}({stat.nature}): {stat.ev}
+			</div>
+		)
 	}
 }
 
@@ -338,7 +453,18 @@ class CalcWrapper {
 		const $ = calc.contentWindow.$;
 
 		const side = place === 1 ? 'L' : 'R';
-		$('#resultMove' + side + index).click();
+		$('#resultMove' + side + (index+1)).click();
+		$('#resultMove' + side + (index+1)).click();
+	}
+
+	getStat(stat, place=2) {
+		const calc = this.getCalc();
+		const $ = calc.contentWindow.$;
+
+		const total = place === 1
+			? $('.' + stat).first().find('.total')
+			: $('.' + stat).last().find('.total')
+		return parseInt(total.text(), 10);
 	}
 
 	//returns the current roll of the selected move
@@ -348,7 +474,10 @@ class CalcWrapper {
 		const $ = calc.contentWindow.$;
 		
 		const rollsText = $('#damageValues').text();
-		//TODO go from string to list of numbers
+
+		//remove first and last char, which are '(' and ')'
+		//then split on ',' and parse each element as an int
+		return rollsText.slice(1, rollsText.length-1).split(',').map(r => parseInt(r, 10))
 	}
 }
 
@@ -365,6 +494,17 @@ function getSpeciesName(mon) {
 		return speciesParts[speciesParts.length-1].split(')')[0]
 	}
 	return namePart;
+}
+
+//gets the moves of an importable mon
+function getMoves(mon) {
+	const moves = []
+	mon.split('\n').forEach(line => {
+		if(line.trim().startsWith('-')) {
+			moves.push(line.split('-')[1].trim());
+		}
+	});
+	return moves;
 }
 
 let healthPixels = null;

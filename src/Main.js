@@ -86,7 +86,13 @@ class Main extends Component {
 	//do the analysis for this particular setup
 	handleAnalyze() {
 		const analysis = this.state.analyses[this.state.selectedAnalysis];
-		analysis.analyze();
+		analysis.analyze(analysis => {
+			const analyses = this.state.analyses.slice();
+			analyses[this.state.selectedAnalysis] = analysis;
+			this.setState({
+				analyses: analyses,
+			});
+		});
 	}
 
 	//pick another saved analysis
@@ -162,7 +168,7 @@ class Main extends Component {
 	renderResults() {
 		return (
 			<Results 
-				contents={this.state.analyses[this.state.selectedAnalysis].getResults}
+				content={this.state.analyses[this.state.selectedAnalysis].content}
 			/>
 		);
 	}

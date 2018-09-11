@@ -1,0 +1,9 @@
+move enemy pokemon name to outside of moninput
+	it should be independent of analysis, as all analyses must be of the same pokemon
+	store it in main, use it in constructor of analysis
+
+add name field for analysis
+
+adding a new analysis could copy from current analysis
+
+add pixel number to dropdown text for defensive calcs
