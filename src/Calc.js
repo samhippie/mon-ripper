@@ -12,7 +12,7 @@ class Calc extends Component {
 			<button
 				onClick={() => this.props.onAnalyze()}
 			>
-				Save and Analyze
+				Save and Analyze (this will hang your browser, especially for defensive calcs)
 			</button>
 		);
 	}
