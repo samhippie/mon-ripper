@@ -85,7 +85,8 @@ class Main extends Component {
 
 	//do the analysis for this particular setup
 	handleAnalyze() {
-
+		const analysis = this.state.analyses[this.state.selectedAnalysis];
+		analysis.analyze();
 	}
 
 	//pick another saved analysis

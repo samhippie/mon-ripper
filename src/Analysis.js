@@ -1,5 +1,5 @@
 import React from 'react';
-import 
+import BattleMovedex from './moves';
 
 class Analysis {
 	constructor(id) {
@@ -84,6 +84,7 @@ class Analysis {
 		c.putMon(this.mon, 1);
 		c.putMon(enemy, 2);
 
+		c.getRoll();
 	}
 
 	analyze() {
@@ -95,11 +96,26 @@ class Analysis {
 	}
 
 	offensiveAnalysis() {
+		const c = this.calcWrapper;
+
 		//get whether the move is physical or special
-		
+		const move = getMove(this.move);
+		const isPhysical = move.category === 'Physical';
 
 		//start search with - nature, then neutral nature, then positive nature
 		//for each nature, make sure damage is between min roll of 0 evs and max roll of 252 evs
+		const natureTypes = ['-',' ','+'];
+		natureTypes.forEach(natureType => {
+			const nature = getNature(isPhysical, true, natureType);
+			const stat = getStat(isPhysical, true);
+			c.setNature(nature);
+			//TODO ev optimization stated above
+			for(let i = 0; i <= 252; i += 4) {
+				c.setEV(stat, i);
+				c.selectMove(this.selectedMove, 2);
+				const roll = c.getRoll();
+			}
+		});
 		
 		//save EV values that yeild a possible roll
 	}
@@ -109,9 +125,78 @@ class Analysis {
 	}
 }
 
+//gets a nature that changes the given stat
+//' ' for neutral, '-' for minus, '+' for plus
+//speed for moves like gyro ball matters here,
+//but I'm just not going to worry about it
+//everything is neutral speed
+function getNature(isPhysical, isOffensive, type) {
+	if(isPhysical) {
+		if(isOffensive) {
+			switch(type) {
+				case '-':
+					return 'Modest';
+				case ' ':
+					return 'Hardy';
+				case '+':
+					return 'Adamant';
+				//no default
+			}
+		} else {
+			switch(type) {
+				case '-':
+					return 'Lonely';
+				case ' ':
+					return 'Hardy';
+				case '+':
+					return 'Impish';
+				//no default
+			}
+		}
+	} else {
+		if(isOffensive) {
+			switch(type) {
+				case '-':
+					return 'Adamant';
+				case ' ':
+					return 'Hardy';
+				case '+':
+					return 'Modest';
+				//no default
+			}
+		} else {
+			switch(type) {
+				case '-':
+					return 'Naughty';
+				case ' ':
+					return 'Hardy';
+				case '+':
+					return 'Careful';
+				//no default
+			}
+		}
+	}
+}
+
+//gets the internal stat name for the given stat type
+function getStat(isPhysical, isOffensive) {
+	if(isPhysical) {
+		if(isOffensive) {
+			return 'at';
+		} else {
+			return 'df';
+		}
+	} else {
+		if(isOffensive) {
+			return 'sa';
+		} else {
+			return 'sd';
+		}
+	}
+}
+
 //builder for making PS importables
 //I'm too lazy to make proper setters, but it should be fine
-//I'm not even sure setters are "idiomatic" javascript/react/whatever
 class ImportableBuilder {
 	constructor() {
 		this.name = 'Swadloon';
@@ -207,6 +292,7 @@ class CalcWrapper {
 	}
 
 	//sets item of a mon
+	//item is something like "Choice Scarf"
 	setItem(item, place=2) {
 		const calc = this.getCalc();
 		const $ = calc.contentWindow.$;
@@ -217,6 +303,52 @@ class CalcWrapper {
 			: $('.item').last();
 		itemElem.val(item);
 		itemElem.change();
+	}
+
+	//sets nature of given mon
+	//nature is something like "Modest"
+	setNature(nature, place=2) {
+		const calc = this.getCalc();
+		const $ = calc.contentWindow.$;
+
+		//gets nature selector
+		const natureElem = place === 1 
+			? $('.nature').first()
+			: $('.nature').last();
+		natureElem.val(nature);
+		natureElem.change();
+	}
+
+	//sets the ev to the given value of the given mon
+	//stat is something like 'at'
+	setEV(stat, value, place=2) {
+		const calc = this.getCalc();
+		const $ = calc.contentWindow.$;
+
+		const evElem = place === 1
+			? $('.' + stat).first().find('.evs')
+			: $('.' + stat).last().find('.evs')
+		evElem.val(value);
+		evElem.change();
+	}
+
+	//selects the given move
+	selectMove(index, place) {
+		const calc = this.getCalc();
+		const $ = calc.contentWindow.$;
+
+		const side = place === 1 ? 'L' : 'R';
+		$('#resultMove' + side + index).click();
+	}
+
+	//returns the current roll of the selected move
+	//as a list of numbers
+	getRoll() {
+		const calc = this.getCalc();
+		const $ = calc.contentWindow.$;
+		
+		const rollsText = $('#damageValues').text();
+		//TODO go from string to list of numbers
 	}
 }
 
@@ -270,6 +402,13 @@ export function getHealthPixels() {
 		});
 	}
 	return healthPixels;
+}
+
+//gets the move from move.js using the move's proper name
+function getMove(name) {
+	//move.js uses a different naming scheme
+	name = name.toLowerCase().replace(' ', '');
+	return BattleMovedex[name];
 }
 
 export default Analysis;
