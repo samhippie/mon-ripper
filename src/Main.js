@@ -206,7 +206,9 @@ class Main extends Component {
 	}
 
 	renderDisclaimer() {
-		return null;
+		return (
+			<p>KOs are not yet implemented.</p>
+		);
 	}
 
 	render() {
