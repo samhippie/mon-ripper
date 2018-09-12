@@ -206,9 +206,7 @@ class Main extends Component {
 	}
 
 	renderDisclaimer() {
-		return (
-			<p>Items aren't implemented. If you know the item, input it in the damage calc.</p>
-		);
+		return null;
 	}
 
 	render() {

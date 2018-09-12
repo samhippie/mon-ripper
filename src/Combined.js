@@ -45,56 +45,77 @@ class Combined {
 		return (
 			<div>
 				<p>Here are the minimum spreads. Check the dev console for all {count} results</p>
-				{Object.keys(this.results).map((name, i) => this.renderResult(this.results[name], i))}
+				{Object.keys(this.results).map((name, i) => this.renderResult(name, this.results[name], i))}
 			</div>
 		);
 	}
 
 	//renders the result of a single enemy
-	renderResult(result, key) {
+	renderResult(name, result, key) {
+		//sums each stat's EVs
 		const getTotal = (result) => {
 			return result.map(r => r.ev).reduce((acc, x) => acc+x);
 		}
-		//get best overall result
-		let bestSpread = null
-		let minTotal = null
+		//get all items given to analyses (some might not have any results)
+		const itemMap = {}
+		for(const a of this.analyses) {
+			a.items.forEach(i => itemMap[i] = true);
+		}
+		const items = ['No Item',...Object.keys(itemMap)];
+
+		//get best overall result for each item
+		let bestSpread = {}
+		let minTotal = {}
 		for(const r of result) {
 			const total = getTotal(r);
-			if(!bestSpread || total < minTotal) {
-				bestSpread = r;
-				minTotal = total;
+			if(!bestSpread[r[0].item] || total < minTotal[r[0].item]) {
+				bestSpread[r[0].item] = r;
+				minTotal[r[0].item] = total;
 			}
 		}
-		//get best neutral-natured result (might not exist);
-		let bestNeutralSpread = null;
-		minTotal = null;
-		for(const r of result) {
+		//get best neutral-natured result for each item (might not exist)
+		let bestNeutralSpread = {};
+		minTotal = {};
+		for(const r of result.filter(r => !r.find(s => s.nature !== ' '))) {
 			const total = getTotal(r);
-			if(r.nature === ' ' && (!bestNeutralSpread || total < minTotal)) {
-				bestNeutralSpread = r;
-				minTotal = total;
+			if(!bestNeutralSpread[r[0].item] || total < minTotal[r[0].item]) {
+				bestNeutralSpread[r[0].item] = r;
+				minTotal[r[0].item] = total;
 			}
 		}
 		return (
 			<div 
 				key={key}
 			>
-				Best spread:<br/>
-				{this.renderSpread(bestSpread)}<br/>
-				Best spread (neutral nature):<br/>
-				{this.renderSpread(bestNeutralSpread)}
+				{name}<br/>
+				Best spreads<br/>
+				{items.map((item, i) => this.renderSpread(bestSpread[item], i))}<br/>
+				Best spreads (neutral nature)<br/>
+				{items.map((item, i) => this.renderSpread(bestNeutralSpread[item], i))}
 			</div>
 		);
 	}
 
-	renderSpread(spread) {
+	renderSpread(spread, key) {
 		if(!spread) {
-			return 'no spread found';
+			return (
+				<div
+					key={key}
+				>
+					No spread found
+				</div>
+			);
 		}
+		const item = spread[0].item;
 		return (
-			<ul>
-				{spread.map((stat, i) => this.renderStat(stat, i))}
-			</ul>
+			<div
+				key={key}
+			>
+				{item}
+				<ul>
+					{spread.map((stat, i) => this.renderStat(stat, i))}
+				</ul>
+			</div>
 		);
 	}
 
@@ -124,7 +145,8 @@ function mergeResults(results1, results2) {
 			for(const ev1 of r1.concat(r2)) {
 				if(!combined.find(ev2 => ev2.stat === ev1.stat && 
 									ev2.nature === ev1.nature &&
-									ev2.ev === ev1.ev)) {
+									ev2.ev === ev1.ev &&
+									ev2.item === ev1.item)) {
 					combined.push(ev1);
 				}
 			}
@@ -144,6 +166,12 @@ function verifyResult(result) {
 		if(result.find(ev2 => ev1.stat === ev2.stat &&
 						(ev1.nature !== ev2.nature ||
 						ev1.ev !== ev2.ev))) {
+			return false;
+		}
+	}
+	//check for inconsistent items
+	for(const ev1 of result) {
+		if(result.find(ev2 => ev1.item !== ev2.item)) {
 			return false;
 		}
 	}

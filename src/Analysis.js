@@ -110,38 +110,46 @@ class Analysis {
 
 		const validSpreads = [];
 
-		//start search with - nature, then neutral nature, then positive nature
-		//for each nature, make sure damage is between min roll of 0 evs and max roll of 252 evs
-		const natureTypes = ['-',' ','+'];
-		natureTypes.forEach(natureType => {
-			const nature = getNature(isPhysical, true, natureType);
-			const stat = getStat(isPhysical, true);
-			c.setNature(nature);
-			c.selectMove(this.selectedMove, 2);
+		//search using each item as well as no item
+		for(const item of ['No Item',...this.items]) {
+			//if the user doesn't give any items, don't change the item
+			if(this.items.length !== 0) {
+				c.setItem(item);
+			}
+			//start search with - nature, then neutral nature, then positive nature
+			//for each nature, make sure damage is between min roll of 0 evs and max roll of 252 evs
+			const natureTypes = ['-',' ','+'];
+			for(const natureType of natureTypes) {
+				const nature = getNature(isPhysical, true, natureType);
+				const stat = getStat(isPhysical, true);
+				c.setNature(nature);
+				c.selectMove(this.selectedMove, 2);
 
-			//get min for nature
-			c.setEV(stat, 0);
-			const min = c.getRoll()[0];
-			//get max for nature
-			c.setEV(stat, 252);
-			const max = c.getRoll()[15];
-			//if not min <= damage <= max, don't bother searching
-			if(this.damage >= min && this.damage <= max) {
-				for(let ev = 0; ev <= 252; ev += 4) {
-					//let's just assume that the IV is 31
-					if(ev % 8 === 0) continue;
-					c.setEV(stat, ev);
-					const roll = c.getRoll();
-					if(roll.includes(this.damage)) {
-						validSpreads.push([{
-							stat: stat,
-							nature: natureType,
-							ev: ev,
-						}]);
+				//get min for nature
+				c.setEV(stat, 0);
+				const min = c.getRoll()[0];
+				//get max for nature
+				c.setEV(stat, 252);
+				const max = c.getRoll()[15];
+				//if not min <= damage <= max, don't bother searching
+				if(this.damage >= min && this.damage <= max) {
+					for(let ev = 0; ev <= 252; ev += 4) {
+						//let's just assume that the IV is 31
+						if(ev % 8 === 0) continue;
+						c.setEV(stat, ev);
+						const roll = c.getRoll();
+						if(roll.includes(this.damage)) {
+							validSpreads.push([{
+								stat: stat,
+								nature: natureType,
+								ev: ev,
+								item: item,
+							}]);
+						}
 					}
 				}
 			}
-		});
+		}
 		return validSpreads;
 	}
 
@@ -162,56 +170,68 @@ class Analysis {
 
 		const validSpreads = [];
 
-		//start search with - nature, then neutral nature, then positive nature
-		//for each nature, make sure damage is between min roll of 0 evs and max roll of 252 evs
-		const natureTypes = ['-',' ','+'];
-		natureTypes.forEach(natureType => {
-			const nature = getNature(isPhysical, false, natureType);
-			const stat = getStat(isPhysical, false);
-			c.setNature(nature);
-			c.selectMove(this.selectedMove, 1);
-			
-			//get min for nature
-			c.setEV('hp', 252);//remember: more defense => less damage
-			c.setEV(stat, 252);
-			const min = c.getRoll()[0] / c.getStat('hp');
-			//get max for nature
-			c.setEV('hp', 0);
-			c.setEV(stat, 0);
-			const max = c.getRoll()[15] / c.getStat('hp');
-			//don't search if the nature is impossible
-			if(min <= damageRange.lower && max >= damageRange.upper) {
-				//check over every possible hp and (special) defense EV combination
-				//this could be smarter, but whatever
-				for(let hp = 0; hp < 252; hp += 4) {
-					if(hp % 8 === 0) continue;
-					c.setEV('hp', hp);
-					const hpStat = c.getStat('hp');
-					for(let ev = 0; ev < 252; ev += 4) {
-						if(ev % 8 === 0) continue;
-						c.setEV(stat, ev);
-						const roll = c.getRoll();
-						if(roll.find(r => checkDamage(r, hpStat))) {
-							validSpreads.push([{
-								stat: 'hp',
-								nature: ' ',
-								ev: hp,
-							}, {
-								stat: stat,
-								nature: natureType,
-								ev: ev,
-							}]);
-						}
+		//search using each item as well as no item
+		for(const item of ['No Item', ...this.items]) {
+			//if the user doesn't give any items, don't change the item
+			if(this.items.length !== 0) {
+				c.setItem(item);
+			}
+			//start search with - nature, then neutral nature, then positive nature
+			//for each nature, make sure damage is between min roll of 0 evs and max roll of 252 evs
+			const natureTypes = ['-',' ','+'];
+			for(const natureType of natureTypes) {
+				const nature = getNature(isPhysical, false, natureType);
+				const stat = getStat(isPhysical, false);
+				c.setNature(nature);
+				c.selectMove(this.selectedMove, 1);
+				
+				//get min for nature
+				c.setEV('hp', 252);//remember: more defense => less damage
+				c.setEV(stat, 252);
+				const min = c.getRoll()[0] / c.getStat('hp');
+				//get max for nature
+				c.setEV('hp', 0);
+				c.setEV(stat, 0);
+				const max = c.getRoll()[15] / c.getStat('hp');
+				//don't search if the nature is impossible
+				if(min <= damageRange.lower && max >= damageRange.upper) {
+					//check over every possible hp and (special) defense EV combination
+					//this could be smarter, but whatever
+					for(let hp = 0; hp < 252; hp += 4) {
+						if(hp % 8 === 0) continue;
+						c.setEV('hp', hp);
+						const hpStat = c.getStat('hp');
+						for(let ev = 0; ev < 252; ev += 4) {
+							if(ev % 8 === 0) continue;
+							c.setEV(stat, ev);
+							const roll = c.getRoll();
+							if(roll.find(r => checkDamage(r, hpStat))) {
+								validSpreads.push([{
+									stat: 'hp',
+									nature: ' ',
+									ev: hp,
+									item: item,
+								}, {
+									stat: stat,
+									nature: natureType,
+									ev: ev,
+									item: item,
+								}]);
+							}
 
+						}
 					}
 				}
-			}
 
-		});
+			}
+		}
 		return validSpreads;
 	}
 
 	renderResults() {
+		if(this.results.length === 0) {
+			return 'No spreads found';
+		}
 		return (
 			<div>
 				<ul>
@@ -222,10 +242,12 @@ class Analysis {
 	}
 
 	renderResult(result, key) {
+		const item = result[0].item;
 		return (
 			<li
 				key={key}
 			>
+				{item}
 				{result.map((stat, i) => this.renderStatResult(stat, i))}
 			</li>
 		);
@@ -411,6 +433,11 @@ class CalcWrapper {
 	setItem(item, place=2) {
 		const calc = this.getCalc();
 		const $ = calc.contentWindow.$;
+		
+		//the calc uses '' as the key, but I prefer 'No Item'
+		if(item === 'No Item') {
+			item = '';
+		}
 
 		//gets the item selector
 		const itemElem = place === 1 

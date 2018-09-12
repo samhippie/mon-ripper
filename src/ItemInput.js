@@ -98,6 +98,7 @@ class ItemInput extends Component {
 		return (
 			<div className="iteminput">
 				<h5>Items</h5>
+				If you know the item for sure, leave this empty and input the item in the damage calc.<br/>
 				Enter the names exactly as they appear in showdown (e.g. "Choice Scarf")
 				{this.renderItems()}
 				{this.renderTheWorks()}
