@@ -396,32 +396,41 @@ class ImportableBuilder {
 class CalcWrapper {
 	constructor(calc) {
 		this.nameCounts = {};
+		this.selectCache = {};
 	}
 
 	getCalc() {
 		return document.getElementById('calcIframe');
 	}
 
+	//cached version of the damage calc's $
+	$(query) {
+		if(this.selectCache[query]) {
+			return this.selectCache[query];
+		}
+
+		const result = this.getCalc().contentWindow.$(query);
+		this.selectCache[query] = result;
+		return result;
+	}
+
 	//puts the given PS importable in the place
 	//place is either 1 or 2
 	putMon(mon, place) {
-		const calc = this.getCalc();
-		const $ = calc.contentWindow.$;
-
 		//put the mon in as a custom set
-		$('#customMon').val(mon);
+		this.$('#customMon').val(mon);
 		//never repeat names for the same species
 		const species = getSpeciesName(mon);
 		if(!this.nameCounts[species]) {
 			this.nameCounts[species] = 0;
 		}
 		const spread = this.nameCounts[species]
-		$('#spreadName').val(spread);
+		this.$('#spreadName').val(spread);
 		this.nameCounts[species]++;
-		calc.contentWindow.savecustom();
+		this.getCalc().contentWindow.savecustom();
 
 		//put the saved set in the proper place
-		const info = $('.set-selector.select2-offscreen')
+		const info = this.$('.set-selector.select2-offscreen')
 		const pokeinfo = place === 1 ? info.first() : info.last();
 		pokeinfo.val(species + ' (' + spread + ')');
 		pokeinfo.change();
@@ -431,9 +440,6 @@ class CalcWrapper {
 	//sets item of a mon
 	//item is something like "Choice Scarf"
 	setItem(item, place=2) {
-		const calc = this.getCalc();
-		const $ = calc.contentWindow.$;
-		
 		//the calc uses '' as the key, but I prefer 'No Item'
 		if(item === 'No Item') {
 			item = '';
@@ -441,8 +447,8 @@ class CalcWrapper {
 
 		//gets the item selector
 		const itemElem = place === 1 
-			? $('.item').first()
-			: $('.item').last();
+			? this.$('.item').first()
+			: this.$('.item').last();
 		itemElem.val(item);
 		itemElem.change();
 	}
@@ -450,13 +456,10 @@ class CalcWrapper {
 	//sets nature of given mon
 	//nature is something like "Modest"
 	setNature(nature, place=2) {
-		const calc = this.getCalc();
-		const $ = calc.contentWindow.$;
-
 		//gets nature selector
 		const natureElem = place === 1 
-			? $('.nature').first()
-			: $('.nature').last();
+			? this.$('.nature').first()
+			: this.$('.nature').last();
 		natureElem.val(nature);
 		natureElem.change();
 	}
@@ -464,43 +467,31 @@ class CalcWrapper {
 	//sets the ev to the given value of the given mon
 	//stat is something like 'at'
 	setEV(stat, value, place=2) {
-		const calc = this.getCalc();
-		const $ = calc.contentWindow.$;
-
 		const evElem = place === 1
-			? $('.' + stat).first().find('.evs')
-			: $('.' + stat).last().find('.evs')
+			? this.$('.' + stat).first().find('.evs')
+			: this.$('.' + stat).last().find('.evs')
 		evElem.val(value);
 		evElem.change();
 	}
 
 	//selects the given move
 	selectMove(index, place) {
-		const calc = this.getCalc();
-		const $ = calc.contentWindow.$;
-
 		const side = place === 1 ? 'L' : 'R';
-		$('#resultMove' + side + (index+1)).click();
-		$('#resultMove' + side + (index+1)).click();
+		this.$('#resultMove' + side + (index+1)).click();
+		this.$('#resultMove' + side + (index+1)).click();
 	}
 
 	getStat(stat, place=2) {
-		const calc = this.getCalc();
-		const $ = calc.contentWindow.$;
-
 		const total = place === 1
-			? $('.' + stat).first().find('.total')
-			: $('.' + stat).last().find('.total')
+			? this.$('.' + stat).first().find('.total')
+			: this.$('.' + stat).last().find('.total')
 		return parseInt(total.text(), 10);
 	}
 
 	//returns the current roll of the selected move
 	//as a list of numbers
 	getRoll() {
-		const calc = this.getCalc();
-		const $ = calc.contentWindow.$;
-		
-		const rollsText = $('#damageValues').text();
+		const rollsText = this.$('#damageValues').text();
 
 		//remove first and last char, which are '(' and ')'
 		//then split on ',' and parse each element as an int
