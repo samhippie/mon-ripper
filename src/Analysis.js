@@ -160,13 +160,8 @@ class Analysis {
 		const move = getMove(this.move);
 		const isPhysical = move.category === 'Physical';
 
-		//checks if damage fits in given damage range
+		//get upper and lower bounds on damage as percentages
 		const damageRange = getHealthPixels()[this.damage];
-		const checkDamage = (damage, hp) => {
-			//const hp = c.getStat('hp');
-			return damage >= damageRange.lower * hp &&
-				damage <= damageRange.upper * hp;
-		}
 
 		const validSpreads = [];
 
@@ -187,6 +182,8 @@ class Analysis {
 				
 				//get min for nature
 				c.setEV('hp', 252);//remember: more defense => less damage
+				//need to save this for later analysis
+				const maxHp = c.getStat('hp');
 				c.setEV(stat, 252);
 				const min = c.getRoll()[0] / c.getStat('hp');
 				//get max for nature
@@ -195,34 +192,53 @@ class Analysis {
 				const max = c.getRoll()[15] / c.getStat('hp');
 				//don't search if the nature is impossible
 				if(min <= damageRange.lower && max >= damageRange.upper) {
-					//check over every possible hp and (special) defense EV combination
-					//this could be smarter, but whatever
-					for(let hp = 0; hp < 252; hp += 4) {
-						if(hp % 8 === 0) continue;
-						c.setEV('hp', hp);
-						const hpStat = c.getStat('hp');
-						for(let ev = 0; ev < 252; ev += 4) {
-							if(ev % 8 === 0) continue;
-							c.setEV(stat, ev);
-							const roll = c.getRoll();
-							if(roll.find(r => checkDamage(r, hpStat))) {
-								validSpreads.push([{
-									stat: 'hp',
-									nature: ' ',
-									ev: hp,
-									item: item,
-								}, {
-									stat: stat,
-									nature: natureType,
-									ev: ev,
-									item: item,
-								}]);
+					const savedSpreads = {};
+					//see how much raw damage is done for each defensive stat point
+					//then calculated valid hp EVs from that
+					for(let ev = 0; ev <= 252; ev += 4) {
+						if(ev % 8 === 0) {
+							continue;
+						}
+						c.setEV(stat, ev);
+						const roll = c.getRoll();
+						for(const r of roll) {
+							//lower bound on hp stat
+							const hp1 = Math.ceil(r / damageRange.upper);
+							//upper bound on hp stat
+							const hp2 = Math.floor(r / damageRange.lower);
+
+							//lower bound on hp EVs
+							const hpLowerEv = 252 - (maxHp - hp1) * 8;
+							//upper bound on hp EVs
+							const hpUpperEv = 252 - (maxHp - hp2) * 8;
+
+							//obviously impossible
+							if(hpUpperEv < 0 || hpLowerEv > 252) {
+								continue;
 							}
 
+							//hpLowerEv and hpUpperEv are already aligned by 8 (i.e. equivalent to 4 mod 8)
+							for(let hp = hpLowerEv; hp <= hpUpperEv; hp += 8) {
+								//don't want to save the same stat combo more than once
+								//also don't save any illegal hp values
+								if(hp >= -4 && hp <= 252 && !savedSpreads[[hp, ev]]) {
+									savedSpreads[[hp,ev]] = true;
+									validSpreads.push([{
+										stat: 'hp',
+										nature: ' ',
+										ev: Math.max(hp, 0),//-4 to -1 should map to zero, hp < -4 is already filtered
+										item: item,
+									}, {
+										stat: stat,
+										nature: natureType,
+										ev: ev,
+										item: item,
+									}]);
+								}
+							}
 						}
 					}
 				}
-
 			}
 		}
 		return validSpreads;
