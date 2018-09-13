@@ -1,5 +1,7 @@
 import React from 'react';
 import BattleMovedex from './moves';
+import BattleItems from './items';
+import { calcMovedex } from './pokedex-calc';
 
 class Analysis {
 	constructor(id) {
@@ -27,10 +29,14 @@ class Analysis {
 		
 		this.results = null;
 		this.contents = null;
-		
+
+		this.stringCorrector = new StringCorrector();
+
 		//this has an error string if there is an error
 		this.error = null;
 	}
+
+	//setters
 
 	setType(type) {
 		this.type = type;
@@ -58,6 +64,21 @@ class Analysis {
 
 	setItems(items) {
 		this.items = items;
+	}
+
+	//hamming-based correction
+	//(don't do this automatically)
+
+	correctName() {
+		this.name = this.stringCorrector.getMon(this.name);
+	}
+
+	correctMove() {
+		this.move = this.stringCorrector.getMove(this.move);
+	}
+
+	correctItem(index) {
+		this.items[index] = this.stringCorrector.getItem(this.items[index]);
 	}
 
 	renderCalc() {
@@ -583,6 +604,77 @@ function getMove(name) {
 	//move.js uses a different naming scheme
 	name = name.toLowerCase().replace(' ', '');
 	return BattleMovedex[name];
+}
+
+//correct spelling mistakes in some user-entered fields
+class StringCorrector {
+	constructor() {
+		//can't use this as the damage calc uses a separate naming system
+		//this.monNames = Object.keys(BattleMovedex).map(...
+		this.monNames = Object.keys(calcMovedex);
+		this.itemNames = Object.keys(BattleItems).map(id => BattleItems[id].name);
+		this.moveNames = Object.keys(BattleMovedex).map(id => BattleMovedex[id].name);
+	}
+
+	//returns closest pokemon name
+	getMon(mon) {
+		return this.getString(this.monNames, mon);
+	}
+
+	//returns closest move name
+	getMove(move) {
+		return this.getString(this.moveNames, move);
+	}
+
+	//returns closest item name
+	getItem(item) {
+		return this.getString(this.itemNames, item);
+
+	}
+
+	//returns c in candidates that's closest to str in edit distance
+	getString(candidates, str) {
+		let bestCandidate = null;
+		let minDist = null;
+		for(const candid of candidates) {
+			const dist = this.distance(candid, str);
+			if(!bestCandidate || dist < minDist) {
+				bestCandidate = candid;
+				minDist = dist;
+			}
+		}
+		return bestCandidate;
+	}
+
+	//https://en.wikipedia.org/wiki/Wagner%E2%80%93Fischer_algorithm
+	distance(s, t) {
+		const m = s.length;
+		const n = t.length;
+		const d = Array.from({length: m+1}, () => Array.from({length: n+1}));
+		for(let i = 0; i <= m; i++) {
+			d[i][0] = i;
+		}
+		for(let j = 0; j <= n; j++) {
+			d[0][j] = j;
+		}
+
+		for(let j = 1; j <= n; j++) {
+			for(let i = 1; i <= m; i++) {
+				if(s[i-1] === t[j-1]) {
+					d[i][j] = d[i-1][j-1];
+				} else {
+					d[i][j] = Math.min(
+						d[i-1][j]+1,
+						d[i][j-1]+1,
+						d[i-1][j-1]+1
+					);
+				}
+			}
+		}
+
+		return d[m][n];
+	}
+
 }
 
 export default Analysis;

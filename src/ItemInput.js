@@ -48,6 +48,11 @@ class ItemInput extends Component {
 					/>
 				</label>
 				<button
+					onClick={() => this.props.onCorrect(index)}
+				>
+					Auto-correct
+				</button>
+				<button
 					onClick={() => this.handleRemove(index)}
 				>
 					X

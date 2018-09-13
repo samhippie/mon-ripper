@@ -39,6 +39,30 @@ class Main extends Component {
 		});
 	}
 
+	handleCorrectName() {
+		const analyses = this.state.analyses.slice();
+		analyses[this.state.selectedAnalysis].correctName();
+		this.setState({
+			analyses: analyses,
+		});
+	}
+
+	handleCorrectMove() {
+		const analyses = this.state.analyses.slice();
+		analyses[this.state.selectedAnalysis].correctMove();
+		this.setState({
+			analyses: analyses,
+		});
+	}
+
+	handleCorrectItem(index) {
+		const analyses = this.state.analyses.slice();
+		analyses[this.state.selectedAnalysis].correctItem(index);
+		this.setState({
+			analyses: analyses,
+		});
+	}
+
 	handleName(name) {
 		const analyses = this.state.analyses.slice();
 		analyses[this.state.selectedAnalysis].setName(name);
@@ -154,10 +178,13 @@ class Main extends Component {
 				onType={type => this.handleType(type)}
 				onMon={mon => this.handleMon(mon)}
 				onName={name => this.handleName(name)}
+				onCorrectName={() => this.handleCorrectName()}
 				onMove={move => this.handleMove(move)}
+				onCorrectMove={() => this.handleCorrectMove()}
 				onDamage={damage => this.handleDamage(damage)}
 				onKO={isKO => this.handleKO(isKO)}
 				onItems={items => this.handleItems(items)}
+				onCorrectItem={(index) => this.handleCorrectItem(index)}
 				onApply={() => this.handleApply()}
 			/>
 		);

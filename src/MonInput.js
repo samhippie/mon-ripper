@@ -57,6 +57,11 @@ class MonInput extends Component {
 					value={this.props.analysis.name}
 					onChange={event => this.props.onName(event.target.value)}
 				/>
+				<button
+					onClick={() => this.props.onCorrectName()}
+				>
+					Auto-correct
+				</button>
 			</label>
 		);
 	}
@@ -74,6 +79,11 @@ class MonInput extends Component {
 					value={this.props.analysis.move}
 					onChange={event => this.props.onMove(event.target.value)}
 				/>
+				<button
+					onClick={() => this.props.onCorrectMove()}
+				>
+					Auto-correct
+				</button>
 			</label>
 		);
 	}
@@ -132,6 +142,7 @@ class MonInput extends Component {
 			<ItemInput
 				analysis={this.props.analysis}
 				onChange={items => this.props.onItems(items)}
+				onCorrect={(index) => this.props.onCorrectItem(index)}
 			/>
 		);
 	}
